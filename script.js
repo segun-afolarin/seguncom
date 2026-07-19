@@ -1,405 +1,303 @@
-const hamburger = document.getElementById('hamburger');
-const navLinks = document.getElementById('nav-links');
+// Set current year in footer
+document.getElementById("year").textContent = new Date().getFullYear();
 
-hamburger.addEventListener('click', () => {
-  hamburger.classList.toggle('active');
-  navLinks.classList.toggle('open');
+/* ===============================
+   PRELOADER
+=================================*/
+window.addEventListener("load", () => {
+  const preloader = document.getElementById("preloader");
+  if (preloader) {
+    setTimeout(() => {
+      preloader.classList.add("preloader-hidden");
+    }, 400); // small delay so the animation is felt, not just flashed
+  }
 });
-// --- Starry Background ---
-const canvas = document.getElementById("stars");
-const ctx = canvas.getContext("2d");
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
+// Safety net: force-hide preloader after 4s even if load event is slow/misses
+setTimeout(() => {
+  const preloader = document.getElementById("preloader");
+  if (preloader) preloader.classList.add("preloader-hidden");
+}, 4000);
 
-let stars = Array.from({ length: 150 }, () => ({
-  x: Math.random() * canvas.width,
-  y: Math.random() * canvas.height,
-  r: Math.random() * 1.2,
-  s: Math.random() * 0.5 + 0.2,
-}));
-
-function drawStars() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#fff";
-  stars.forEach(star => {
-    ctx.beginPath();
-    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
-    ctx.fill();
-    star.y += star.s;
-    if (star.y > canvas.height) star.y = 0;
-  });
-  requestAnimationFrame(drawStars);
-}
-drawStars();
-
-// --- Typing Effect ---
-const introText = "Hello, it's me Afolarin Oluwasegun.";
+/* ===============================
+   HERO — typewriter role cycler
+=================================*/
 const roles = [
   "Fullstack Developer",
-  "Graphic Designer",
-  "UI/UX Designer"
+  "UI/UX Designer",
+  "API Integrator",
+  "React & Laravel Dev",
 ];
 
-const introEl = document.getElementById("intro");
-const roleEl = document.getElementById("role");
-
+const typedEl = document.getElementById("hero-typed");
 let roleIndex = 0;
+let charIndex = 0;
+let isDeleting = false;
 
-function typeText(el, text, delay = 100) {
-  return new Promise(resolve => {
-    el.textContent = "";
-    let i = 0;
-    const interval = setInterval(() => {
-      el.textContent += text[i];
-      i++;
-      if (i === text.length) {
-        clearInterval(interval);
-        setTimeout(resolve, 1000);
-      }
-    }, delay);
-  });
+function typeLoop() {
+  if (!typedEl) return;
+
+  const currentRole = roles[roleIndex];
+
+  if (isDeleting) {
+    charIndex--;
+  } else {
+    charIndex++;
+  }
+
+  typedEl.textContent = currentRole.substring(0, charIndex);
+
+  let delay = isDeleting ? 40 : 80;
+
+  if (!isDeleting && charIndex === currentRole.length) {
+    delay = 1400; // pause at full word
+    isDeleting = true;
+  } else if (isDeleting && charIndex === 0) {
+    isDeleting = false;
+    roleIndex = (roleIndex + 1) % roles.length;
+    delay = 300;
+  }
+
+  setTimeout(typeLoop, delay);
 }
 
-async function startTyping() {
-  // First line types fully
-  await typeText(introEl, introText);
+typeLoop();
 
-  // Now continuously type roles only
-  while (true) {
-    const role = roles[roleIndex];
-    await typeText(roleEl, role);
-    roleIndex = (roleIndex + 1) % roles.length;
+/* ===============================
+   MOBILE MENU TOGGLE
+=================================*/
+const menuBtn = document.getElementById("menu-btn");
+const mobileMenu = document.getElementById("mobile-menu");
+const menuBars = document.querySelectorAll(".menu-bar");
+
+function closeMenu() {
+  mobileMenu.classList.add("hidden");
+  mobileMenu.classList.remove("flex");
+  menuBtn.setAttribute("aria-expanded", "false");
+  menuBars[0].style.transform = "";
+  menuBars[1].style.opacity = "1";
+  menuBars[2].style.transform = "";
+}
+
+function toggleMenu() {
+  const isOpen = !mobileMenu.classList.contains("hidden");
+  if (isOpen) {
+    closeMenu();
+  } else {
+    mobileMenu.classList.remove("hidden");
+    mobileMenu.classList.add("flex");
+    menuBtn.setAttribute("aria-expanded", "true");
+    menuBars[0].style.transform = "translateY(6px) rotate(45deg)";
+    menuBars[1].style.opacity = "0";
+    menuBars[2].style.transform = "translateY(-6px) rotate(-45deg)";
   }
 }
 
-startTyping();
+if (menuBtn) {
+  menuBtn.addEventListener("click", toggleMenu);
+}
 
-// === ABOUT SECTION ANIMATIONS ===
+document.querySelectorAll(".mobile-link").forEach((link) => {
+  link.addEventListener("click", closeMenu);
+});
 
-// Fade-in on scroll
-const aboutSection = document.querySelector('.about-container');
+// Close mobile menu automatically if window is resized back to desktop
+window.addEventListener("resize", () => {
+  if (window.innerWidth >= 640) {
+    closeMenu();
+  }
+});
 
-const observer = new IntersectionObserver(
+/* ===============================
+   SKILLS — animate bars into view
+=================================*/
+const skillBars = document.querySelectorAll(".skill-bar");
+
+const skillObserver = new IntersectionObserver(
   (entries) => {
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observer.unobserve(entry.target); // run once
+        const bar = entry.target;
+        bar.style.width = bar.dataset.width;
+        skillObserver.unobserve(bar);
       }
     });
   },
-  { threshold: 0.3 }
+  { threshold: 0.4 }
 );
 
-observer.observe(aboutSection);
-
-// Ripple effect for the Download CV button
-const cvButton = document.querySelector('.cv-btn');
-cvButton.addEventListener('click', function (e) {
-  const circle = document.createElement('span');
-  const rect = this.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  circle.style.left = `${x}px`;
-  circle.style.top = `${y}px`;
-  circle.classList.add('ripple');
-  this.appendChild(circle);
-  setTimeout(() => circle.remove(), 600);
+skillBars.forEach((bar) => {
+  bar.style.width = "0%";
+  bar.style.transition = "width 1s ease";
+  skillObserver.observe(bar);
 });
 
-// ==== SKILLS ANIMATION (v2) ====
+/* ===============================
+   LIGHTBOX (shared: projects + certificates)
+=================================*/
+const lightbox = document.getElementById("lightbox");
+const lightboxContent = document.getElementById("lightbox-content");
+const lightboxClose = document.getElementById("lightbox-close");
 
-document.addEventListener("DOMContentLoaded", () => {
-  const skillCards = document.querySelectorAll(".skill-card");
+function openLightbox() {
+  lightbox.classList.remove("hidden");
+  lightbox.classList.add("flex");
+  document.body.style.overflow = "hidden";
+}
 
-  // Physics-inspired number animation
-  function animateValue(el, target, duration) {
-    let startTime = null;
-    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+function closeLightbox() {
+  lightbox.classList.add("hidden");
+  lightbox.classList.remove("flex");
+  lightboxContent.innerHTML = ""; // stops any playing video
+  document.body.style.overflow = "";
+}
 
-    function update(currentTime) {
-      if (!startTime) startTime = currentTime;
-      const progress = Math.min((currentTime - startTime) / duration, 1);
-      const easedProgress = easeOutCubic(progress);
-      const value = Math.floor(easedProgress * target);
-      el.textContent = value.toLocaleString();
-      if (progress < 1) requestAnimationFrame(update);
-    }
+/* --- Project gallery: image / video preview --- */
+function openMediaLightbox(type, src, poster) {
+  lightboxContent.innerHTML = "";
+  lightboxContent.className = "max-w-4xl w-full rounded-2xl overflow-hidden shadow-2xl";
 
-    requestAnimationFrame(update);
-  }
-
-  // Animate cards when visible
-  const observer = new IntersectionObserver(
-    (entries, obs) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const card = entry.target;
-          const valueEl = card.querySelector(".skill-value");
-          const targetValue = parseInt(card.dataset.target, 10);
-          if (!isNaN(targetValue)) {
-            animateValue(valueEl, targetValue, 2000);
-          }
-          card.classList.add("visible");
-          obs.unobserve(card);
-        }
-      });
-    },
-    { threshold: 0.3 }
-  );
-
-  skillCards.forEach((card) => observer.observe(card));
-});
-// ===== PROJECTS SCRIPT =====
-
-// Run everything after DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
-  const filterButtons = document.querySelectorAll(".filter-btn");
-  const projectCards = document.querySelectorAll(".project-card");
-  const preloader = document.getElementById("projects-preloader");
-
-  // ==== FILTER FUNCTIONALITY ====
-  filterButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      // Remove active from all buttons
-      filterButtons.forEach((btn) => btn.classList.remove("active"));
-      button.classList.add("active");
-
-      const category = button.getAttribute("data-filter");
-
-      projectCards.forEach((card) => {
-        const cardCategory = card.getAttribute("data-category");
-
-        if (category === "all" || cardCategory === category) {
-          card.style.display = "block";
-          setTimeout(() => card.classList.add("visible"), 100);
-        } else {
-          card.classList.remove("visible");
-          setTimeout(() => (card.style.display = "none"), 200);
-        }
-      });
-    });
-  });
-
-  // ==== SCROLL REVEAL ====
-  const animatedElements = document.querySelectorAll("[data-animate]");
-
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(
-      (entries, obs) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("visible");
-            obs.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.2 }
-    );
-
-    animatedElements.forEach((el) => observer.observe(el));
+  if (type === "video") {
+    const video = document.createElement("video");
+    video.src = src;
+    video.poster = poster || "";
+    video.controls = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.className = "w-full h-full max-h-[80vh] object-contain bg-black";
+    lightboxContent.appendChild(video);
   } else {
-    // Fallback for old browsers
-    animatedElements.forEach((el) => el.classList.add("visible"));
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "Project preview";
+    img.className = "w-full h-full max-h-[80vh] object-contain bg-black";
+    lightboxContent.appendChild(img);
   }
 
-  // ==== PROJECTS PRELOADER ====
-  window.addEventListener("load", () => {
-    if (preloader) {
-      preloader.classList.add("fade-out");
-      setTimeout(() => {
-        preloader.style.display = "none";
-      }, 800);
-    }
+  openLightbox();
+}
+
+document.querySelectorAll(".gallery-item").forEach((item) => {
+  item.addEventListener("click", () => {
+    const type = item.dataset.type;
+    const src = item.dataset.src;
+    const poster = item.dataset.poster;
+    openMediaLightbox(type, src, poster);
   });
 });
-document.addEventListener("DOMContentLoaded", () => {
-  const textEl = document.getElementById("testimonial-text");
-  const nameEl = document.getElementById("testimonial-name");
-  const roleEl = document.getElementById("testimonial-role");
-  const imgEl = document.getElementById("testimonial-img");
-  const cardEl = document.getElementById("testimonial-card");
 
-  const testimonials = [
-    {
-      text: "Collaborating with Afolarin was effortless — his understanding of both design and development made our web experience seamless.",
-      name: "David Ikenna",
-      role: "Product Manager, SoftNet",
-      img: "https://randomuser.me/api/portraits/men/32.jpg",
-    },
-    {
-      text: "He delivered a flawless UI that perfectly matched our brand’s voice. Every detail felt intentional and professional.",
-      name: "Zainab Yusuf",
-      role: "Founder, ZDesign Studio",
-      img: "https://randomuser.me/api/portraits/women/22.jpg",
-    },
-    {
-      text: "Afolarin’s full-stack skills are sharp. From database logic to pixel alignment, everything was clean and scalable.",
-      name: "Michael Chukwu",
-      role: "CTO, Cloudify Africa",
-      img: "https://randomuser.me/api/portraits/men/44.jpg",
-    },
-    {
-      text: "He transformed our brand visuals into something modern and memorable. The logo system he built still stands out today.",
-      name: "Fatima Bello",
-      role: "Creative Director, ArtHaus",
-      img: "https://randomuser.me/api/portraits/women/41.jpg",
-    },
-    {
-      text: "Professional, disciplined, and imaginative. Afolarin brings ideas to life faster than expected and better than planned.",
-      name: "John Eze",
-      role: "Entrepreneur",
-      img: "https://randomuser.me/api/portraits/men/50.jpg",
-    },
-  ];
+/* --- Certificates: professional card preview (PDF) --- */
+function openCertificateLightbox(src, title, issuer) {
+  lightboxContent.innerHTML = "";
+  lightboxContent.className = "max-w-2xl w-full";
 
-  let index = 0;
+  const card = document.createElement("div");
+  card.className = "bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col";
 
-  function showTestimonial() {
-    const { text, name, role, img } = testimonials[index];
-    cardEl.classList.remove("fade-in");
-    cardEl.classList.add("fade-out");
+  card.innerHTML = `
+    <div class="bg-navy-900 h-[55vh] sm:h-[65vh]">
+      <iframe src="${src}#toolbar=1&view=FitH" title="${title} certificate"
+              class="w-full h-full border-0" loading="lazy"></iframe>
+    </div>
+    <div class="p-5 sm:p-7 flex items-center justify-between gap-4">
+      <div class="min-w-0">
+        <p class="text-[11px] font-semibold uppercase tracking-widest text-accent-500 mb-1">Certificate</p>
+        <h3 class="font-display font-bold text-lg text-navy-950 truncate">${title}</h3>
+        <p class="text-sm text-slate-500 mt-1">${issuer}</p>
+      </div>
+      <div class="shrink-0 flex items-center gap-2">
+        <a href="${src}" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+           aria-label="Open certificate in a new tab">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+        </a>
+        <a href="${src}" download
+           class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-accent-500/10 text-accent-500 hover:bg-accent-500 hover:text-white transition"
+           aria-label="Download certificate">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </a>
+      </div>
+    </div>
+  `;
 
-    setTimeout(() => {
-      textEl.textContent = text;
-      nameEl.textContent = name;
-      roleEl.textContent = role;
-      imgEl.src = img;
+  lightboxContent.appendChild(card);
+  openLightbox();
+}
 
-      cardEl.classList.remove("fade-out");
-      cardEl.classList.add("fade-in", "visible");
-    }, 600);
-
-    index = (index + 1) % testimonials.length;
-  }
-
-  showTestimonial();
-  setInterval(showTestimonial, 7000);
+document.querySelectorAll(".cert-view").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const src = btn.dataset.src;
+    const title = btn.dataset.title;
+    const issuer = btn.dataset.issuer;
+    openCertificateLightbox(src, title, issuer);
+  });
 });
-// === FOOTER YEAR ===
-document.addEventListener("DOMContentLoaded", () => {
-  const yearEl = document.getElementById("year");
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+lightboxClose.addEventListener("click", closeLightbox);
+lightbox.addEventListener("click", (e) => {
+  if (e.target === lightbox) closeLightbox();
 });
-// === SCROLL REVEAL + SKILL COUNTER ===
-document.addEventListener("DOMContentLoaded", () => {
-  const skillCards = document.querySelectorAll(".skill-card");
-
-  const observer = new IntersectionObserver(
-    (entries, obs) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const card = entry.target;
-          card.classList.add("visible");
-
-          // Start counting animation
-          const numberEl = card.querySelector(".number");
-          const target = parseInt(card.dataset.value, 10);
-          let current = 0;
-          const duration = 1500; // 1.5s total duration
-          const stepTime = Math.max(Math.floor(duration / target), 20);
-
-          const counter = setInterval(() => {
-            current += 1;
-            numberEl.textContent = `${current}%`;
-            if (current >= target) {
-              clearInterval(counter);
-              numberEl.textContent = `${target}%`;
-            }
-          }, stepTime);
-
-          // Stop observing after first reveal
-          obs.unobserve(card);
-        }
-      });
-    },
-    { threshold: 0.3 }
-  );
-
-  skillCards.forEach((card) => observer.observe(card));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeLightbox();
 });
-document.addEventListener("DOMContentLoaded", () => {
-  const observer = new IntersectionObserver(
-    (entries, obs) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("visible");
-          obs.unobserve(entry.target);
-        }
-      });
-    },
-    { threshold: 0.2 }
-  );
 
-  document.querySelectorAll("[data-animate]").forEach((el) => observer.observe(el));
-});
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.querySelector(".contact-form");
-  const submitBtn = form.querySelector("button[type='submit']");
+/* ===============================
+   CONTACT FORM — Formspree AJAX submission
+=================================*/
+const contactForm = document.getElementById("contact-form");
+const formStatus = document.getElementById("form-status");
+const submitBtn = document.getElementById("submit-btn");
+const submitBtnText = document.getElementById("submit-btn-text");
 
-  // Create feedback message element
-  const messageEl = document.createElement("p");
-  messageEl.className = "form-message";
-  messageEl.style.marginTop = "1rem";
-  messageEl.style.textAlign = "center";
-  messageEl.style.fontWeight = "600";
-  form.appendChild(messageEl);
-
-  form.addEventListener("submit", async (e) => {
+if (contactForm) {
+  contactForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    messageEl.textContent = "";
+
+    const formData = new FormData(contactForm);
+
+    // loading state
     submitBtn.disabled = true;
-    submitBtn.textContent = "Sending...";
-
-    if (!navigator.onLine) {
-      showMessage("⚠️ No internet connection.", "#ff4d4d");
-      resetButton();
-      return;
-    }
-
-    const formData = new FormData(form);
+    submitBtnText.textContent = "Sending...";
+    formStatus.classList.add("hidden");
 
     try {
-      const response = await fetch(form.action, {
-        method: form.method,
+      const response = await fetch(contactForm.action, {
+        method: "POST",
         body: formData,
         headers: { Accept: "application/json" },
       });
 
       if (response.ok) {
-        form.reset();
-        showMessage("🎉 Message sent successfully! Thank you for reaching out to Afolarin.", "#00c851");
+        // success state
+        submitBtnText.textContent = "Submitted ✓";
+        formStatus.textContent = "Thanks — your message is on its way. I'll get back to you soon.";
+        formStatus.className = "text-sm text-center text-emerald-600";
+        formStatus.classList.remove("hidden");
+
+        contactForm.reset();
+
+        // return button to normal after a short pause
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          submitBtnText.textContent = "Send Message";
+        }, 3000);
       } else {
-        showMessage("⚠️ Something went wrong. Please try again.", "#ff4d4d");
+        throw new Error("Form submission failed");
       }
-    } catch (error) {
-      showMessage("⚠️ Something went wrong. Please try again.", "#ff4d4d");
-      console.error(error);
-    } finally {
-      resetButton();
+    } catch (err) {
+      submitBtn.disabled = false;
+      submitBtnText.textContent = "Send Message";
+      formStatus.textContent = "Something went wrong sending that. Please try again or email me directly.";
+      formStatus.className = "text-sm text-center text-red-500";
+      formStatus.classList.remove("hidden");
     }
   });
-
-  function showMessage(text, color) {
-    messageEl.textContent = text;
-    messageEl.style.color = color;
-    messageEl.style.opacity = "1";
-
-    // Clear message after 4 seconds
-    setTimeout(() => {
-      messageEl.style.transition = "opacity 0.5s ease";
-      messageEl.style.opacity = "0";
-      setTimeout(() => (messageEl.textContent = ""), 500);
-    }, 4000);
-  }
-
-  function resetButton() {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Send Message";
-  }
-});
+}
