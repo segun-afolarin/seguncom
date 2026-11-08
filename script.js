@@ -278,7 +278,7 @@ if (contactForm) {
       if (response.ok) {
         // success state
         submitBtnText.textContent = "Submitted ✓";
-        formStatus.textContent = "Thanks — your message is on its way. I'll get back to you soon.";
+        formStatus.textContent = "Thanks  your message is on its way. I'll get back to you soon.";
         formStatus.className = "text-sm text-center text-emerald-600";
         formStatus.classList.remove("hidden");
 
